@@ -303,7 +303,7 @@ function! s:EditorConfigEnable(should_enable)
         autocmd!
         if a:should_enable
             autocmd BufNewFile,BufReadPost,BufFilePost * call s:UseConfigFiles(1)
-            autocmd VimEnter,BufNew * call s:UseConfigFiles(1)
+            autocmd VimEnter,BufEnter,BufNew * call s:UseConfigFiles(1)
         endif
     augroup END
 endfunction
