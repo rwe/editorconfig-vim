@@ -322,9 +322,6 @@ command! EditorConfigDisable call s:EditorConfigEnable(0)
 command! EditorConfigReload call s:UseConfigFiles(0) " Reload EditorConfig files
 " }}}2
 
-" On startup, enable the autocommands
-call s:EditorConfigEnable(1)
-
 " }}}1
 
 " LoadConfigFiles function for different modes {{{1
@@ -619,6 +616,9 @@ function! s:IsRuleActive(name, config) " {{{1
     return index(g:EditorConfig_disable_rules, a:name) < 0 &&
                  \ has_key(a:config, a:name)
 endfunction "}}}1
+
+" On startup, enable the autocommands
+EditorConfigEnable
 
 let &cpo = s:saved_cpo
 unlet! s:saved_cpo
