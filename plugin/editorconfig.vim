@@ -280,19 +280,15 @@ function! s:UseConfigFiles(from_autocmd) abort " Apply config to the current buf
             \ ' on file "' . l:buffer_name . '"'
     endif
 
-    if s:editorconfig_core_mode ==? 'vim_core'
-        if s:UseConfigFiles_VimCore(l:bufnr, l:buffer_name) == 0
-            call setbufvar(l:bufnr, 'editorconfig_applied', 1)
-        endif
-    elseif s:editorconfig_core_mode ==? 'external_command'
-        call s:UseConfigFiles_ExternalCommand(l:bufnr, l:buffer_name)
+    try
+        let l:config = s:LoadConfigFiles(
+                    \ s:editorconfig_core_mode, l:bufnr, l:buffer_name)
+        call s:ApplyConfig(l:bufnr, l:config)
         call setbufvar(l:bufnr, 'editorconfig_applied', 1)
-    else
-        echohl Error |
-                    \ echo "Unknown EditorConfig Core: " .
-                    \ s:editorconfig_core_mode |
-                    \ echohl None
-    endif
+    catch
+        echo 'Caught :' .. v:exception .. '" in ' .. v:throwpoint
+        return
+    endtry
 endfunction " }}}1
 
 " Custom commands, and autoloading {{{1
@@ -322,32 +318,39 @@ call s:EditorConfigEnable(1)
 
 " }}}1
 
-" UseConfigFiles function for different modes {{{1
-
-function! s:UseConfigFiles_VimCore(bufnr, target)
-" Use the vimscript EditorConfig core
-    try
-        let l:config = editorconfig_core#handler#get_configurations(
-            \ { 'target': a:target } )
-        call s:ApplyConfig(a:bufnr, l:config)
-        return 0    " success
-    catch
-        return 1    " failure
-    endtry
+" LoadConfigFiles function for different modes {{{1
+"
+function! s:LoadConfigFiles(core_mode, bufnr, target) abort
+    if a:core_mode ==? 'vim_core'
+        return s:LoadConfigFiles_VimCore(a:target)
+    elseif a:core_mode ==? 'external_command'
+        return LoadConfigFiles_ExternalCommand(a:bufnr, a:target)
+    else
+        echohl Error |
+                    \ echo "Unknown EditorConfig Core: " .
+                    \ a:core_mode |
+                    \ echohl None
+        throw "UNKNOWN_EDITORCONFIG_CORE_MODE"
+    endif
 endfunction
 
-function! s:UseConfigFiles_ExternalCommand(bufnr, target)
-" Use external EditorConfig core (e.g., the C core)
+function! s:LoadConfigFiles_VimCore(target) abort
+" Use the vimscript EditorConfig core
+    return editorconfig_core#handler#get_configurations(
+        \ { 'target': a:target } )
+endfunction
 
+function! s:LoadConfigFiles_ExternalCommand(bufnr, target)
+" Load config with external EditorConfig core (e.g., the C core)
     call s:DisableShellSlash(a:bufnr)
     let l:exec_path = shellescape(s:editorconfig_exec_path)
     call s:ResetShellSlash(a:bufnr)
 
-    call s:SpawnExternalParser(a:bufnr, l:exec_path, a:target)
+    return s:SpawnExternalParser(a:bufnr, l:exec_path, a:target)
 endfunction
 
 function! s:SpawnExternalParser(bufnr, cmd, target) " {{{2
-" Spawn external EditorConfig. Used by s:UseConfigFiles_ExternalCommand()
+" Spawn external EditorConfig. Used by s:LoadConfigFiles_ExternalCommand()
 
     let l:cmd = a:cmd
 
@@ -398,7 +401,7 @@ function! s:SpawnExternalParser(bufnr, cmd, target) " {{{2
         let l:config[l:eq_left] = l:eq_right
     endfor
 
-    call s:ApplyConfig(a:bufnr, l:config)
+    return l:config
 endfunction " }}}2
 
 " }}}1
