@@ -299,6 +299,15 @@ endfunction " }}}1
 
 " Autocommands, and function to enable/disable the plugin {{{2
 function! s:EditorConfigEnable(should_enable)
+    augroup editorconfig_trim_trailing_whitespace
+        autocmd! BufWritePre <buffer>
+        " Once the config file has been re-read, this autocmd gets cleared or
+        " replaced with the whitespace-trimming hook.
+        if a:should_enable
+            autocmd BufWritePre <buffer> call s:UseConfigFiles(1)
+        endif
+    augroup END
+
     augroup editorconfig
         autocmd!
         if a:should_enable
